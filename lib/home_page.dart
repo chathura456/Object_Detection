@@ -99,87 +99,87 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: Colors.deepPurple,
       appBar: AppBar(title: const Text('Object Detection'),
-      actions: [
-        IconButton(onPressed: (){
+        actions: [
+          IconButton(onPressed: (){
 
-          if(cameraImage != null){
-            cameraController.stopImageStream();
-            cameraController.pausePreview().then((value) {
-              setState(() {
-                results = "";
+            if(cameraImage != null){
+              cameraController.stopImageStream();
+              cameraController.pausePreview().then((value) {
+                setState(() {
+                  results = "";
+                });
               });
-            });
-            setState(() {
-              cameraImage = null;
-            });
+              setState(() {
+                cameraImage = null;
+              });
 
-          }
+            }
 
-        }, icon: const Icon(Icons.flip_camera_ios))
-      ],
+          }, icon: const Icon(Icons.flip_camera_ios))
+        ],
       ),
       body: SingleChildScrollView(
         child: Container(
-            decoration: const BoxDecoration(
+          decoration: const BoxDecoration(
 
-               /* image: DecorationImage(
+            /* image: DecorationImage(
                     image: AssetImage('assets/images/jarvis.jpg'),
                   fit: BoxFit.fitWidth,
                   repeat: ImageRepeat.repeatX
                 ),*/
-            ),
-            child: Column(
-              children: [
-                Stack(
-                  children: [
-                    Center(
-                      child: Container(
-                        width: MediaQuery.of(context).size.width,
-                        height: 500,
-                        child: const SizedBox(),
-                      ),
-                    ),
-                    Center(
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          //cameraController.stopImageStream();
-                          initCamera();
-                          //await runModel();
-                        },
-                        child: Container(
-                          color: Colors.white,
-                         // margin: const EdgeInsets.symmetric(vertical: 35),
-                          height: 500,
-                          width: MediaQuery.of(context).size.width,
-                          child: cameraImage ==null? const SizedBox(
-                            height: 100,
-                            width: 100,
-                            child: Icon(Icons.camera_alt,color: Colors.deepPurple,size: 80,),
-                          ):AspectRatio(
-                            aspectRatio: cameraController.value.aspectRatio,
-                            child: CameraPreview(cameraController),
-                          ),
-                        ),
-                      ),
-                    )
-                  ],
-                ),
-
-                Center(
-                  child: Container(
-                    margin: const EdgeInsets.only(top: 25),
-                    child: SingleChildScrollView(
-                      child: Text(
-                        results,
-                        style: const TextStyle(fontSize: 25,color: Colors.white),
-                        textAlign: TextAlign.center,
-                      ),
+          ),
+          child: Column(
+            children: [
+              Stack(
+                children: [
+                  Center(
+                    child: Container(
+                      width: MediaQuery.of(context).size.width,
+                      height: 500,
+                      child: const SizedBox(),
                     ),
                   ),
-                )
-              ],
-            ),
+                  Center(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        //cameraController.stopImageStream();
+                        initCamera();
+                        //await runModel();
+                      },
+                      child: Container(
+                        color: Colors.white,
+                        // margin: const EdgeInsets.symmetric(vertical: 35),
+                        height: 500,
+                        width: MediaQuery.of(context).size.width,
+                        child: cameraImage ==null? const SizedBox(
+                          height: 100,
+                          width: 100,
+                          child: Icon(Icons.camera_alt,color: Colors.deepPurple,size: 80,),
+                        ):AspectRatio(
+                          aspectRatio: cameraController.value.aspectRatio,
+                          child: CameraPreview(cameraController),
+                        ),
+                      ),
+                    ),
+                  )
+                ],
+              ),
+
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 25),
+                  child: SingleChildScrollView(
+                    child: Text(
+                      results,
+                      style: const TextStyle(fontSize: 25,color: Colors.white),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              )
+            ],
           ),
+        ),
       ),
 
     );
