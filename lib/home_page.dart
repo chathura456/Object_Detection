@@ -23,7 +23,7 @@ class _HomePageState extends State<HomePage> {
           if(!isWorking){
             isWorking = true,
             cameraImage = image,
-             //runModel()
+            runModel()
           }
         });
       });
@@ -118,7 +118,7 @@ class _HomePageState extends State<HomePage> {
                     onPressed: () async {
                       cameraController.stopImageStream();
                       initCamera();
-                      await runModel();
+                      //await runModel();
                     },
                     child: Container(
                       margin: const EdgeInsets.only(top: 35),
