@@ -7,12 +7,12 @@ late List<CameraDescription> cameras;
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   cameras = await availableCameras();
-  runApp(MyApp(cameras: cameras,));
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key, required this.cameras});
-  final List<CameraDescription> cameras;
+  const MyApp({super.key});
+
 
   // This widget is the root of your application.
   @override
@@ -21,9 +21,9 @@ class MyApp extends StatelessWidget {
       title: 'Flutter Demo',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.deepPurple,
       ),
-      home: HomePage(cameras: cameras,),
+      home: const HomePage(),
     );
   }
 }
