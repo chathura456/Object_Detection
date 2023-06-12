@@ -1,22 +1,27 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:tflite/tflite.dart';
-
 import 'main.dart';
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
-  //final List<CameraDescription> cameras;
+class PoseDetector extends StatefulWidget {
+  const PoseDetector({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<PoseDetector> createState() => _PoseDetectorState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _PoseDetectorState extends State<PoseDetector> {
+
   bool isWorking = false;
   String results = '';
   late CameraController cameraController;
-  CameraImage? cameraImage;
+  //CameraImage? cameraImage;
+  late List _recognitions;
+  late double _imageHeight;
+  late double _imageWidth;
+  CameraImage? img;
+  bool isBusy = false;
 
   initCamera() {
     cameraController.initialize().then((value) {
@@ -24,8 +29,9 @@ class _HomePageState extends State<HomePage> {
         cameraController.startImageStream((image) => {
           if(!isWorking){
             isWorking = true,
-            cameraImage = image,
-            runModel()
+            img = image,
+            //runModel()
+            runModelOnFrame()
           }
         });
       });
@@ -33,10 +39,14 @@ class _HomePageState extends State<HomePage> {
   }
 
   loadModel() async{
-    await Tflite.loadModel(
-        model: 'assets/mobilenet_v1_1.0_224.tflite',
-        labels: 'assets/mobilenet_v1_1.0_224.txt'
-    );
+    try{
+      await Tflite.loadModel(
+          model: 'assets/posenet_mv1_075_float_from_checkpoints.tflite',
+         // labels: 'assets/mobilenet_v1_1.0_224.txt'
+      );
+    }on PlatformException {
+      print('Failed to load model.');
+    }
 
   }
 
@@ -44,10 +54,9 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     // TODO: implement initState
     super.initState();
+    loadModel();
     cameraController = CameraController(cameras[0],ResolutionPreset.high);
-    //initCamera();
-    //loadModel();
-
+    initCamera();
   }
 
   @override
@@ -59,7 +68,26 @@ class _HomePageState extends State<HomePage> {
     cameraController.dispose();
   }
 
-  Future runModel() async {
+  runModelOnFrame() async {
+    _imageWidth = (img!.width + 0.0)!;
+    _imageHeight = (img!.height + 0.0)!;
+    _recognitions = (await Tflite.runPoseNetOnFrame(
+      bytesList: img!.planes.map((plane) {
+        return plane.bytes;
+      }).toList(),
+      imageHeight: img!.height,
+      imageWidth: img!.width,
+      numResults: 1,
+      threshold: 0.7,
+    ))!;
+    print(_recognitions.length);
+    isWorking = false;
+    setState(() {
+      img;
+    });
+  }
+
+  /*Future runModel() async {
     if(cameraImage != null){
       await loadModel();
       //print('--------checked----------------');
@@ -90,18 +118,81 @@ class _HomePageState extends State<HomePage> {
         results = '';
       });
     }
-  }
+  }*/
 
+  //TODO draw points
+  List<Widget> renderKeyPoints(Size screen) {
+    if (_recognitions == null) return [];
+    if (_imageHeight == null || _imageWidth == null) return [];
+
+    double factorX = screen.width;
+   double factorY = _imageHeight;
+    //double factorY = _imageHeight/_imageWidth*screen.width;
+
+    var lists = <Widget>[];
+    for (var re in _recognitions) {
+      var list = re["keypoints"].values.map<Widget>((k) {
+        return Positioned(
+          left: k["x"] * factorX ,
+          top: k["y"] * factorY ,
+          width: 100,
+          height: 40,
+          child: Text(
+            "● ${k["part"]}",
+            style: const TextStyle(
+              color: Colors.red,
+              fontSize: 12.0,
+            ),
+          ),
+        );
+      }).toList();
+
+      lists.addAll(list);
+    }
+    print('The list : $lists');
+
+    return lists;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    Size size = MediaQuery.of(context).size;
+    List<Widget> stackChildren = [];
+
+    stackChildren.add(Positioned(
+        top: 0.0,
+        left: 0.0,
+        width: size.width,
+        height: size.height,
+        child: Container(
+          child: (!cameraController.value.isInitialized)
+              ? Container()
+              : AspectRatio(
+            aspectRatio: cameraController.value.aspectRatio,
+            child: CameraPreview(cameraController),
+          ),
+        )));
+
+    if (img != null) {
+      stackChildren.addAll(renderKeyPoints(size));
+    }
+    return SafeArea(
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Container(
+            color: Colors.grey,
+            child: Stack(
+              children: stackChildren,
+            )),
+      ),
+    );
+   /* return Scaffold(
       backgroundColor: Colors.deepPurple,
       appBar: AppBar(title: const Text('Object Detection'),
         actions: [
           IconButton(onPressed: (){
 
-            if(cameraImage != null){
+            if(img != null){
               cameraController.stopImageStream();
               cameraController.pausePreview().then((value) {
                 setState(() {
@@ -109,7 +200,7 @@ class _HomePageState extends State<HomePage> {
                 });
               });
               setState(() {
-                cameraImage = null;
+                img = null;
               });
 
             }
@@ -144,13 +235,14 @@ class _HomePageState extends State<HomePage> {
                         //cameraController.stopImageStream();
                         initCamera();
                         //await runModel();
+                        await runModelOnFrame();
                       },
                       child: Container(
                         color: Colors.white,
                         // margin: const EdgeInsets.symmetric(vertical: 35),
                         height: 500,
                         width: MediaQuery.of(context).size.width,
-                        child: cameraImage ==null? const SizedBox(
+                        child: img ==null? const SizedBox(
                           height: 100,
                           width: 100,
                           child: Icon(Icons.camera_alt,color: Colors.deepPurple,size: 80,),
@@ -181,6 +273,6 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
 
-    );
+    );*/
   }
 }
