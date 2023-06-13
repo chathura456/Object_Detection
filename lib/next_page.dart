@@ -22,6 +22,8 @@ class _PoseDetectorState extends State<PoseDetector> {
   late double _imageWidth;
   CameraImage? img;
   bool isBusy = false;
+  bool handWasUp = false;
+  int repCount = 0;
 
   initCamera() {
     cameraController.initialize().then((value) {
@@ -153,6 +155,15 @@ class _PoseDetectorState extends State<PoseDetector> {
       var keypointsList = re["keypoints"].values.toList();
       var keypoints = { for (var k in keypointsList) k["part"] : k };
 
+      bool handIsUp = keypoints["rightWrist"]["y"] < 0.5;
+
+      // Check if a repetition has been completed
+      if (handWasUp && !handIsUp) {
+        repCount++;
+      }
+
+      handWasUp = handIsUp;
+
       var list = keypoints.values.map<Widget>((k) {
         if (k["score"] > 0.2) {
           return Positioned(
@@ -231,15 +242,19 @@ class _PoseDetectorState extends State<PoseDetector> {
     Size size = MediaQuery.of(context).size;
     List<Widget> stackChildren = [];
 
-    stackChildren.add(Positioned(
+    stackChildren.add(
+        Positioned(
         top: 0.0,
         left: 0.0,
         width: size.width,
-        height: size.height*0.9,
+        height: size.height*1,
         child: Container(
           child: (img==null)
               ? ElevatedButton(
             onPressed: (){
+              setState(() {
+                repCount = 0;
+              });
               initCamera();
             },
             child: Container(
@@ -272,6 +287,7 @@ class _PoseDetectorState extends State<PoseDetector> {
 
     if (img != null && _recognitions.isNotEmpty) {
       stackChildren.addAll(renderKeyPoints(size));
+
     }
 
 
@@ -289,6 +305,15 @@ class _PoseDetectorState extends State<PoseDetector> {
             ),),
           elevation: 2.0,
           actions: [
+            Center(
+              child: Text(repCount.toString(),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 25,
+                ),
+              ),
+            ),
+            SizedBox(width: 20,),
             IconButton(onPressed: () async {
               if(img != null){
                 cameraController.stopImageStream();
@@ -296,10 +321,14 @@ class _PoseDetectorState extends State<PoseDetector> {
                 });
                 setState(() {
                   img = null;
+                  repCount = 0;
+
                 });
               }
             }, icon: img==null?const Icon(Icons.flip_camera_ios,color: Colors.white,):
-            const Icon(Icons.stop,color: Colors.white,))
+            const Icon(Icons.stop,color: Colors.white,)),
+            SizedBox(width: 10,),
+
           ],
         ),
         body: Container(
