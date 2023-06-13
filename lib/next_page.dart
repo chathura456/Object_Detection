@@ -1,8 +1,12 @@
+import 'dart:math';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:tflite/tflite.dart';
 import 'main.dart';
+
+enum ExerciseState { handDown, handRaising, handUp, handLowering }
 
 class PoseDetector extends StatefulWidget {
   const PoseDetector({super.key});
@@ -24,6 +28,10 @@ class _PoseDetectorState extends State<PoseDetector> {
   bool isBusy = false;
   bool handWasUp = false;
   int repCount = 0;
+  double previousWristY = 0.0;
+
+
+  ExerciseState exerciseState = ExerciseState.handDown;
 
   initCamera() {
     cameraController.initialize().then((value) {
@@ -70,25 +78,6 @@ class _PoseDetectorState extends State<PoseDetector> {
     cameraController.dispose();
   }
 
- /*runModelOnFrame() async {
-    _imageWidth = (img!.width + 0.0)!;
-    _imageHeight = (img!.height + 0.0)!;
-    _recognitions = (await Tflite.runPoseNetOnFrame(
-      bytesList: img!.planes.map((plane) {
-        return plane.bytes;
-      }).toList(),
-      imageHeight: img!.height,
-      imageWidth: img!.width,
-      numResults: 1,
-      threshold: 0.7,
-    ))!;
-    print(_recognitions.length);
-    isWorking = false;
-    setState(() {
-      img;
-    });
-  }*/
-
   runModelOnFrame() async {
     _imageWidth = (img!.width + 0.0)!;
     _imageHeight = (img!.height + 0.0)!;
@@ -108,40 +97,6 @@ class _PoseDetectorState extends State<PoseDetector> {
     });
   }
 
-
-  /*Future runModel() async {
-    if(cameraImage != null){
-      await loadModel();
-      //print('--------checked----------------');
-      var recognitions = await Tflite.runModelOnFrame(
-          bytesList: cameraImage!.planes.map((plane) {
-            return plane.bytes;
-          }).toList(),
-          imageHeight: cameraImage!.height,
-          imageWidth: cameraImage!.width,
-          imageMean: 127.5,
-          imageStd: 127.5,
-          rotation: 90,
-          numResults: 2,
-          threshold: 0.1,
-          asynch: true
-      );
-      results = "";
-      recognitions?.forEach((response) {
-        results += response["label"] + " " + (response["confidence"] as double).toStringAsFixed(2) + "\n\n";
-        print(results);
-      });
-      setState(() {
-        results;
-      });
-      isWorking = false;
-    }else{
-      setState(() {
-        results = '';
-      });
-    }
-  }*/
-
   //TODO draw points
   List<Widget> renderKeyPoints(Size screen) {
     if (_recognitions == null) return [];
@@ -153,16 +108,36 @@ class _PoseDetectorState extends State<PoseDetector> {
     var lists = <Widget>[];
     for (var re in _recognitions) {
       var keypointsList = re["keypoints"].values.toList();
-      var keypoints = { for (var k in keypointsList) k["part"] : k };
+      //var keypoints = { for (var k in keypointsList) k["part"] : k };
+      var keypoints = Map.fromIterable(keypointsList, key: (k) => k['part'], value: (k) => k);
+      // Apply smoothing
+      double wristY = 0.5 * previousWristY + 0.5 * keypoints["rightWrist"]["y"];
+      previousWristY = wristY;
 
-      bool handIsUp = keypoints["rightWrist"]["y"] < 0.5;
-
-      // Check if a repetition has been completed
-      if (handWasUp && !handIsUp) {
-        repCount++;
+      // Determine the state of the exercise
+      switch (exerciseState) {
+        case ExerciseState.handDown:
+          if (wristY < keypoints["rightShoulder"]["y"]) {
+            exerciseState = ExerciseState.handRaising;
+          }
+          break;
+        case ExerciseState.handRaising:
+          if (wristY < keypoints["rightElbow"]["y"]) {
+            exerciseState = ExerciseState.handUp;
+          }
+          break;
+        case ExerciseState.handUp:
+          if (wristY > keypoints["rightElbow"]["y"]) {
+            exerciseState = ExerciseState.handLowering;
+          }
+          break;
+        case ExerciseState.handLowering:
+          if (wristY > keypoints["rightShoulder"]["y"]) {
+            exerciseState = ExerciseState.handDown;
+            repCount++;
+          }
+          break;
       }
-
-      handWasUp = handIsUp;
 
       var list = keypoints.values.map<Widget>((k) {
         if (k["score"] > 0.2) {
@@ -339,6 +314,57 @@ class _PoseDetectorState extends State<PoseDetector> {
       ),
     );
   }
+
+/*Future runModel() async {
+    if(cameraImage != null){
+      await loadModel();
+      //print('--------checked----------------');
+      var recognitions = await Tflite.runModelOnFrame(
+          bytesList: cameraImage!.planes.map((plane) {
+            return plane.bytes;
+          }).toList(),
+          imageHeight: cameraImage!.height,
+          imageWidth: cameraImage!.width,
+          imageMean: 127.5,
+          imageStd: 127.5,
+          rotation: 90,
+          numResults: 2,
+          threshold: 0.1,
+          asynch: true
+      );
+      results = "";
+      recognitions?.forEach((response) {
+        results += response["label"] + " " + (response["confidence"] as double).toStringAsFixed(2) + "\n\n";
+        print(results);
+      });
+      setState(() {
+        results;
+      });
+      isWorking = false;
+    }else{
+      setState(() {
+        results = '';
+      });
+    }
+  }*/
+/*runModelOnFrame() async {
+    _imageWidth = (img!.width + 0.0)!;
+    _imageHeight = (img!.height + 0.0)!;
+    _recognitions = (await Tflite.runPoseNetOnFrame(
+      bytesList: img!.planes.map((plane) {
+        return plane.bytes;
+      }).toList(),
+      imageHeight: img!.height,
+      imageWidth: img!.width,
+      numResults: 1,
+      threshold: 0.7,
+    ))!;
+    print(_recognitions.length);
+    isWorking = false;
+    setState(() {
+      img;
+    });
+  }*/
 }
 
 
