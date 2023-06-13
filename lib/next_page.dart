@@ -56,7 +56,7 @@ class _PoseDetectorState extends State<PoseDetector> {
     super.initState();
     loadModel();
     cameraController = CameraController(cameras[0],ResolutionPreset.high);
-    initCamera();
+   // initCamera();
   }
 
   @override
@@ -67,6 +67,25 @@ class _PoseDetectorState extends State<PoseDetector> {
     cameraController.stopImageStream();
     cameraController.dispose();
   }
+
+ /*runModelOnFrame() async {
+    _imageWidth = (img!.width + 0.0)!;
+    _imageHeight = (img!.height + 0.0)!;
+    _recognitions = (await Tflite.runPoseNetOnFrame(
+      bytesList: img!.planes.map((plane) {
+        return plane.bytes;
+      }).toList(),
+      imageHeight: img!.height,
+      imageWidth: img!.width,
+      numResults: 1,
+      threshold: 0.7,
+    ))!;
+    print(_recognitions.length);
+    isWorking = false;
+    setState(() {
+      img;
+    });
+  }*/
 
   runModelOnFrame() async {
     _imageWidth = (img!.width + 0.0)!;
@@ -86,6 +105,7 @@ class _PoseDetectorState extends State<PoseDetector> {
       img;
     });
   }
+
 
   /*Future runModel() async {
     if(cameraImage != null){
@@ -126,15 +146,17 @@ class _PoseDetectorState extends State<PoseDetector> {
     if (_imageHeight == null || _imageWidth == null) return [];
 
     double factorX = screen.width;
-   double factorY = _imageHeight;
-    //double factorY = _imageHeight/_imageWidth*screen.width;
+    double factorY = _imageHeight;
 
     var lists = <Widget>[];
     for (var re in _recognitions) {
-      var list = re["keypoints"].values.map<Widget>((k) {
+      var keypointsList = re["keypoints"].values.toList();
+      var keypoints = { for (var k in keypointsList) k["part"] : k };
+
+      var list = keypoints.values.map<Widget>((k) {
         return Positioned(
-          left: k["x"] * factorX ,
-          top: k["y"] * factorY ,
+          left: k["x"] * factorX,
+          top: k["y"] * factorY,
           width: 100,
           height: 40,
           child: Text(
@@ -148,11 +170,50 @@ class _PoseDetectorState extends State<PoseDetector> {
       }).toList();
 
       lists.addAll(list);
+
+      // Define the skeleton
+     var skeleton = [
+        ["leftShoulder", "rightShoulder"],
+        ["leftShoulder", "leftElbow"],
+        ["rightShoulder", "rightElbow"],
+        ["leftElbow", "leftWrist"],
+        ["rightElbow", "rightWrist"],
+        ["leftShoulder", "leftHip"],
+        ["rightShoulder", "rightHip"],
+        ["leftHip", "rightHip"],
+        ["leftHip", "leftKnee"],
+        ["rightHip", "rightKnee"],
+        ["leftKnee", "leftAnkle"],
+        ["rightKnee", "rightAnkle"],
+      ];
+
+      // Draw the skeleton
+      for (var joints in skeleton) {
+        var firstJoint = joints[0];
+        var secondJoint = joints[1];
+        if (keypoints.containsKey(firstJoint) && keypoints.containsKey(secondJoint)) {
+          lists.add(
+              Container(
+                width: factorX,
+                height: factorY,
+                child: CustomPaint(
+            painter: LinePainter(
+                start: Offset(keypoints[firstJoint]["x"] * factorX, keypoints[firstJoint]["y"] * factorY),
+                end: Offset(keypoints[secondJoint]["x"] * factorX, keypoints[secondJoint]["y"] * factorY),
+                color: Colors.red,
+            ),
+          ),
+              ));
+        }
+      }
     }
-    print('The list : $lists');
 
     return lists;
   }
+
+
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -163,116 +224,101 @@ class _PoseDetectorState extends State<PoseDetector> {
         top: 0.0,
         left: 0.0,
         width: size.width,
-        height: size.height,
+        height: size.height*0.9,
         child: Container(
-          child: (!cameraController.value.isInitialized)
-              ? Container()
+          child: (img==null)
+              ? ElevatedButton(
+            onPressed: (){
+              initCamera();
+            },
+            child: Container(
+              color: Colors.white,
+              child: const Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    height: 100,
+                    width: 100,
+                    child: Icon(Icons.camera_alt,color: Colors.deepPurple,size: 80,),
+                  ),
+                  SizedBox(height: 10,),
+                  Text('Tap on Camera Icon to start Rep Counter',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.deepPurple,
+                      fontSize: 20,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
               : AspectRatio(
             aspectRatio: cameraController.value.aspectRatio,
             child: CameraPreview(cameraController),
           ),
         )));
 
-    if (img != null) {
+    if (img != null && _recognitions.isNotEmpty) {
       stackChildren.addAll(renderKeyPoints(size));
     }
+
+
+
     return SafeArea(
+
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: Colors.deepPurple,
+          title: const Text('AI Rep Counter',
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: 25
+            ),),
+          elevation: 2.0,
+          actions: [
+            IconButton(onPressed: () async {
+              if(img != null){
+                cameraController.stopImageStream();
+                cameraController.pausePreview().then((value) {
+                });
+                setState(() {
+                  img = null;
+                });
+              }
+            }, icon: img==null?const Icon(Icons.flip_camera_ios,color: Colors.white,):
+            const Icon(Icons.stop,color: Colors.white,))
+          ],
+        ),
         body: Container(
-            color: Colors.grey,
+            color: Colors.white,
             child: Stack(
               children: stackChildren,
             )),
       ),
     );
-   /* return Scaffold(
-      backgroundColor: Colors.deepPurple,
-      appBar: AppBar(title: const Text('Object Detection'),
-        actions: [
-          IconButton(onPressed: (){
+  }
+}
 
-            if(img != null){
-              cameraController.stopImageStream();
-              cameraController.pausePreview().then((value) {
-                setState(() {
-                  results = "";
-                });
-              });
-              setState(() {
-                img = null;
-              });
 
-            }
+class LinePainter extends CustomPainter {
+  final Offset start;
+  final Offset end;
+  final Color color;
 
-          }, icon: const Icon(Icons.flip_camera_ios))
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Container(
-          decoration: const BoxDecoration(
+  LinePainter({required this.start, required this.end, required this.color});
 
-            /* image: DecorationImage(
-                    image: AssetImage('assets/images/jarvis.jpg'),
-                  fit: BoxFit.fitWidth,
-                  repeat: ImageRepeat.repeatX
-                ),*/
-          ),
-          child: Column(
-            children: [
-              Stack(
-                children: [
-                  Center(
-                    child: Container(
-                      width: MediaQuery.of(context).size.width,
-                      height: 500,
-                      child: const SizedBox(),
-                    ),
-                  ),
-                  Center(
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        //cameraController.stopImageStream();
-                        initCamera();
-                        //await runModel();
-                        await runModelOnFrame();
-                      },
-                      child: Container(
-                        color: Colors.white,
-                        // margin: const EdgeInsets.symmetric(vertical: 35),
-                        height: 500,
-                        width: MediaQuery.of(context).size.width,
-                        child: img ==null? const SizedBox(
-                          height: 100,
-                          width: 100,
-                          child: Icon(Icons.camera_alt,color: Colors.deepPurple,size: 80,),
-                        ):AspectRatio(
-                          aspectRatio: cameraController.value.aspectRatio,
-                          child: CameraPreview(cameraController),
-                        ),
-                      ),
-                    ),
-                  )
-                ],
-              ),
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 4;
+    canvas.drawLine(start, end, paint);
+  }
 
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.only(top: 25),
-                  child: SingleChildScrollView(
-                    child: Text(
-                      results,
-                      style: const TextStyle(fontSize: 25,color: Colors.white),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-              )
-            ],
-          ),
-        ),
-      ),
-
-    );*/
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) {
+    return true;
   }
 }
