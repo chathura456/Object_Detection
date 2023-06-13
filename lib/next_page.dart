@@ -154,20 +154,27 @@ class _PoseDetectorState extends State<PoseDetector> {
       var keypoints = { for (var k in keypointsList) k["part"] : k };
 
       var list = keypoints.values.map<Widget>((k) {
-        return Positioned(
-          left: k["x"] * factorX,
-          top: k["y"] * factorY,
-          width: 100,
-          height: 40,
-          child: Text(
-            "● ${k["part"]}",
-            style: const TextStyle(
-              color: Colors.red,
-              fontSize: 12.0,
+        if (k["score"] > 0.2) {
+          return Positioned(
+            left: k["x"] * factorX,
+            top: k["y"] * factorY,
+            width: 100,
+            height: 40,
+            child: Text(
+              "● ${k["part"]}",
+              //"● ",
+              style: const TextStyle(
+                color: Colors.red,
+                fontSize: 12.0,
+              ),
             ),
-          ),
-        );
-      }).toList();
+          );
+        }
+        else {
+          return Container();
+        }
+      }
+      ).toList();
 
       lists.addAll(list);
 
@@ -192,18 +199,22 @@ class _PoseDetectorState extends State<PoseDetector> {
         var firstJoint = joints[0];
         var secondJoint = joints[1];
         if (keypoints.containsKey(firstJoint) && keypoints.containsKey(secondJoint)) {
-          lists.add(
-              Container(
-                width: factorX,
-                height: factorY,
-                child: CustomPaint(
-            painter: LinePainter(
-                start: Offset(keypoints[firstJoint]["x"] * factorX, keypoints[firstJoint]["y"] * factorY),
-                end: Offset(keypoints[secondJoint]["x"] * factorX, keypoints[secondJoint]["y"] * factorY),
-                color: Colors.red,
-            ),
-          ),
-              ));
+          if (keypoints[firstJoint]["score"] > 0.2 && keypoints[secondJoint]["score"] > 0.2) {
+            lists.add(
+                Container(
+                  width: factorX,
+                  height: factorY,
+                  child: CustomPaint(
+                    painter: LinePainter(
+                      start: Offset(keypoints[firstJoint]["x"] * factorX,
+                          keypoints[firstJoint]["y"] * factorY),
+                      end: Offset(keypoints[secondJoint]["x"] * factorX,
+                          keypoints[secondJoint]["y"] * factorY),
+                      color: Colors.red,
+                    ),
+                  ),
+                ));
+          }
         }
       }
     }
