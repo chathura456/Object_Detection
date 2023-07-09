@@ -2,6 +2,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:object_detection2/home_page.dart';
 import 'package:object_detection2/next_page.dart';
+import 'package:object_detection2/rep_select.dart';
 
 late List<CameraDescription> cameras;
 

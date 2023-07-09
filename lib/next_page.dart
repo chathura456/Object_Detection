@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:tflite/tflite.dart';
 import 'main.dart';
 
@@ -28,7 +29,15 @@ class _PoseDetectorState extends State<PoseDetector> {
   bool isBusy = false;
   bool handWasUp = false;
   int repCount = 0;
+  int roundCount = 0;
   double previousWristY = 0.0;
+  FlutterTts flutterTts1 = FlutterTts();
+  var rounds = [1,2,3,4,5];
+  var reps = [5,6,7,8,9,10,11,12,13,14,15];
+  var exercises = ['Jumping jacks','Overhead presses','Bicep curls'];
+  var currentRound = 3;
+  var currentRep = 5;
+  var selectedExercise = 'Jumping jacks';
 
 
   ExerciseState exerciseState = ExerciseState.handDown;
@@ -67,6 +76,7 @@ class _PoseDetectorState extends State<PoseDetector> {
     loadModel();
     cameraController = CameraController(cameras[0],ResolutionPreset.high);
    // initCamera();
+   flutterTts1.stop();
   }
 
   @override
@@ -135,6 +145,13 @@ class _PoseDetectorState extends State<PoseDetector> {
           if (wristY > keypoints["rightShoulder"]["y"]) {
             exerciseState = ExerciseState.handDown;
             repCount++;
+            //flutterTts1.speak(repCount.toString());
+            if(repCount>currentRep){
+              setState(() {
+                roundCount++;
+                repCount = 1;
+              });
+            }
           }
           break;
       }
@@ -147,8 +164,8 @@ class _PoseDetectorState extends State<PoseDetector> {
             width: 100,
             height: 40,
             child: Text(
-              "● ${k["part"]}",
-              //"● ",
+             // "● ${k["part"]}",
+              "● ",
               style: const TextStyle(
                 color: Colors.red,
                 fontSize: 12.0,
@@ -225,35 +242,143 @@ class _PoseDetectorState extends State<PoseDetector> {
         height: size.height*1,
         child: Container(
           child: (img==null)
-              ? ElevatedButton(
-            onPressed: (){
-              setState(() {
-                repCount = 0;
-              });
-              initCamera();
-            },
-            child: Container(
-              color: Colors.white,
-              child: const Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+              ? Column(
                 children: [
-                  SizedBox(
-                    height: 100,
-                    width: 100,
-                    child: Icon(Icons.camera_alt,color: Colors.deepPurple,size: 80,),
-                  ),
-                  SizedBox(height: 10,),
-                  Text('Tap on Camera Icon to start Rep Counter',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.deepPurple,
-                      fontSize: 20,
+                  const SizedBox(height: 85,),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children:  [
+                        const Flexible(child: Text('Exercise : ',style: TextStyle(
+                            fontSize: 16,fontWeight: FontWeight.bold
+                        ),),),
+                        const SizedBox(width: 30,),
+                        Flexible(
+                          flex: 2,
+                          child: FittedBox(
+                            child: DropdownButton(
+                                icon: const Icon(Icons.arrow_drop_down_sharp,color: Colors.black),
+                                items: List<DropdownMenuItem<String>>.generate(
+                                    exercises.length,
+                                        (index) => DropdownMenuItem(
+                                        value: exercises[index].toString(),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 15),
+                                          child: Text(exercises[index].toString(),
+                                            style: const TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ))),
+                                value: selectedExercise,
+                                onChanged: (value){
+                                  setState(() {
+                                    selectedExercise = value.toString();
+                                  });
+                                }),
+                          ),
+                        )
+                      ],
                     ),
                   ),
-                ],
-              ),
+                  const SizedBox(height: 15,),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children:  [
+                        const Flexible(child: Text('No of Rounds : ',style: TextStyle(
+                            fontSize: 16,fontWeight: FontWeight.bold
+                        ),),),
+                        const SizedBox(width: 30,),
+                        Flexible(
+                          flex: 2,
+                          child: FittedBox(
+                            child: DropdownButton(
+                                icon: const Icon(Icons.arrow_drop_down_sharp,color: Colors.black),
+                                items: List<DropdownMenuItem<String>>.generate(
+                                    5,
+                                        (index) => DropdownMenuItem(
+                                        value: rounds[index].toString(),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 15),
+                                          child: Text(rounds[index].toString(),
+                                            style: const TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ))),
+                                value: currentRound.toString(),
+                                onChanged: (value){
+                                  setState(() {
+                                    currentRound = int.parse(value.toString());
+                                  });
+                                }),
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 15,),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children:  [
+                        const Flexible(child: Text('No of Reps : ',
+                          style: TextStyle(
+                              fontSize: 16,fontWeight: FontWeight.bold
+                          ),)),
+                        const SizedBox(width: 30,),
+                        Flexible(
+                          flex: 2,
+                          child: FittedBox(
+                            child: DropdownButton(
+                                icon: const Icon(Icons.arrow_drop_down_sharp,color: Colors.black),
+                                items: List<DropdownMenuItem<String>>.generate(
+                                    11,
+                                        (index) => DropdownMenuItem(
+                                        value: reps[index].toString(),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 15),
+                                          child: Text(reps[index].toString(),
+                                            style: const TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ))),
+                                value: currentRep.toString(),
+                                onChanged: (value){
+                                  setState(() {
+                                    currentRep = int.parse(value.toString());
+                                  });
+                                }),
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 15,),
+                  ElevatedButton(
+            onPressed: (){
+                  setState(() {
+                    repCount = 0;
+                  });
+                  initCamera();
+            },
+            child: Container(
+                  child: const Text("Let's start"),
             ),
-          )
+          ),
+                ],
+              )
               : AspectRatio(
             aspectRatio: cameraController.value.aspectRatio,
             child: CameraPreview(cameraController),
@@ -273,7 +398,7 @@ class _PoseDetectorState extends State<PoseDetector> {
         backgroundColor: Colors.white,
         appBar: AppBar(
           backgroundColor: Colors.deepPurple,
-          title: const Text('AI Rep Counter',
+          title: Text('',
             style: TextStyle(
                 color: Colors.white,
                 fontSize: 25
@@ -281,14 +406,23 @@ class _PoseDetectorState extends State<PoseDetector> {
           elevation: 2.0,
           actions: [
             Center(
-              child: Text(repCount.toString(),
-                style: TextStyle(
+              child: Text('Round : ${roundCount.toString()}',
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 25,
                 ),
               ),
             ),
-            SizedBox(width: 20,),
+            const SizedBox(width: 20,),
+            Center(
+              child: Text('Reps : ${repCount.toString()}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 25,
+                ),
+              ),
+            ),
+            const SizedBox(width: 20,),
             IconButton(onPressed: () async {
               if(img != null){
                 cameraController.stopImageStream();
@@ -302,7 +436,7 @@ class _PoseDetectorState extends State<PoseDetector> {
               }
             }, icon: img==null?const Icon(Icons.flip_camera_ios,color: Colors.white,):
             const Icon(Icons.stop,color: Colors.white,)),
-            SizedBox(width: 10,),
+            const SizedBox(width: 10,),
 
           ],
         ),
