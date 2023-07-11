@@ -4,7 +4,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
-import 'package:tflite/tflite.dart';
+import 'package:flutter_tflite/flutter_tflite.dart';
 import 'main.dart';
 
 enum ExerciseState { handDown, handRaising, handUp, handLowering }
@@ -61,6 +61,7 @@ class _PoseDetectorState extends State<PoseDetector> {
     try{
       await Tflite.loadModel(
           model: 'assets/posenet_mv1_075_float_from_checkpoints.tflite',
+          //model: 'assets/posenet.tflite'
          // labels: 'assets/mobilenet_v1_1.0_224.txt'
       );
     }on PlatformException {
@@ -74,7 +75,7 @@ class _PoseDetectorState extends State<PoseDetector> {
     // TODO: implement initState
     super.initState();
     loadModel();
-    cameraController = CameraController(cameras[0],ResolutionPreset.high);
+    cameraController = CameraController(cameras[0],ResolutionPreset.max);
    // initCamera();
    flutterTts1.stop();
   }
