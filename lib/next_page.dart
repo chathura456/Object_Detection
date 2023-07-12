@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -38,6 +39,9 @@ class _PoseDetectorState extends State<PoseDetector> {
   var currentRound = 3;
   var currentRep = 5;
   var selectedExercise = 'Jumping jacks';
+  AudioPlayer player = AudioPlayer();
+  Random random = Random();
+  var randomNumber = 3;
 
 
   ExerciseState exerciseState = ExerciseState.handDown;
@@ -77,8 +81,10 @@ class _PoseDetectorState extends State<PoseDetector> {
     loadModel();
     cameraController = CameraController(cameras[0],ResolutionPreset.max);
    // initCamera();
-   flutterTts1.stop();
+
   }
+
+
 
   @override
   Future<void> dispose() async {
@@ -87,6 +93,7 @@ class _PoseDetectorState extends State<PoseDetector> {
     await Tflite.close();
     cameraController.stopImageStream();
     cameraController.dispose();
+    player.dispose();
   }
 
   runModelOnFrame() async {
@@ -146,11 +153,17 @@ class _PoseDetectorState extends State<PoseDetector> {
           if (wristY > keypoints["rightShoulder"]["y"]) {
             exerciseState = ExerciseState.handDown;
             repCount++;
+            if(repCount==randomNumber){
+                 playRandomMessage();
+            }
             //flutterTts1.speak(repCount.toString());
             if(repCount>currentRep){
+              var rng = Random();
+
               setState(() {
                 roundCount++;
                 repCount = 1;
+                randomNumber = rng.nextInt(currentRep) + 1;
               });
             }
           }
@@ -164,10 +177,10 @@ class _PoseDetectorState extends State<PoseDetector> {
             top: k["y"] * factorY,
             width: 100,
             height: 40,
-            child: Text(
+            child: const Text(
              // "● ${k["part"]}",
               "● ",
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.red,
                 fontSize: 12.0,
               ),
@@ -226,9 +239,21 @@ class _PoseDetectorState extends State<PoseDetector> {
     return lists;
   }
 
+  List<String> messages = [
+    "voices/v1.mp3",
+    "voices/v2.mp3",
+    "voices/v3.mp3",
+    "voices/v4.mp3",
+    "voices/v5.mp3",
+    "voices/v6.mp3",
+    "voices/v7.mp3",
+    "voices/v8.mp3",
+  ];
 
-
-
+  Future playRandomMessage() async {
+    String message = messages[random.nextInt(messages.length)];
+    await player.play(AssetSource(message));
+  }
 
   @override
   Widget build(BuildContext context) {

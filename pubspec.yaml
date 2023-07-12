@@ -38,6 +38,7 @@ dependencies:
   camera: ^0.10.5+2
   flutter_tflite: ^1.0.1
   flutter_tts: ^3.6.3
+  audioplayers: ^4.1.0
 
 dev_dependencies:
   flutter_test:
@@ -65,6 +66,7 @@ flutter:
   assets:
     - assets/
     - assets/images/
+    - assets/voices/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
