@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:flutter_tflite/flutter_tflite.dart';
+import 'exercises.dart';
 import 'main.dart';
 
 enum ExerciseState { handDown, handRaising, handUp, handLowering }
@@ -35,13 +36,15 @@ class _PoseDetectorState extends State<PoseDetector> {
   FlutterTts flutterTts1 = FlutterTts();
   var rounds = [1,2,3,4,5];
   var reps = [5,6,7,8,9,10,11,12,13,14,15];
-  var exercises = ['Jumping jacks','Overhead presses','Bicep curls'];
+  List<String> exercises = ['Jumping jacks','Overhead presses','Bicep curls'];
   var currentRound = 3;
   var currentRep = 5;
   var selectedExercise = 'Jumping jacks';
   AudioPlayer player = AudioPlayer();
   Random random = Random();
   var randomNumber = 3;
+
+  late Map<String, Exercise> exercises1;
 
 
   ExerciseState exerciseState = ExerciseState.handDown;
@@ -81,10 +84,12 @@ class _PoseDetectorState extends State<PoseDetector> {
     loadModel();
     cameraController = CameraController(cameras[0],ResolutionPreset.max);
    // initCamera();
-
+    exercises1 = {
+      'Jumping Jacks': JumpingJacks(updateUI, currentRep),
+      // Add other exercises here...
+    };
+    exercises1[selectedExercise] = JumpingJacks(updateUI, currentRep);
   }
-
-
 
   @override
   Future<void> dispose() async {
@@ -127,48 +132,56 @@ class _PoseDetectorState extends State<PoseDetector> {
     for (var re in _recognitions) {
       var keypointsList = re["keypoints"].values.toList();
       //var keypoints = { for (var k in keypointsList) k["part"] : k };
-      var keypoints = Map.fromIterable(keypointsList, key: (k) => k['part'], value: (k) => k);
+      //var keypoints = Map.fromIterable(keypointsList, key: (k) => k['part'], value: (k) => k);
+      var keypoints = Map<String, dynamic>.fromIterable(
+          keypointsList,
+          key: (k) => k['part'] as String,
+          value: (k) => k as dynamic
+      );
+
       // Apply smoothing
-      double wristY = 0.5 * previousWristY + 0.5 * keypoints["rightWrist"]["y"];
-      previousWristY = wristY;
+      /*double wristY = 0.5 * previousWristY + 0.5 * keypoints["rightWrist"]["y"];
+      previousWristY = wristY;*/
 
-      // Determine the state of the exercise
-      switch (exerciseState) {
-        case ExerciseState.handDown:
-          if (wristY < keypoints["rightShoulder"]["y"]) {
-            exerciseState = ExerciseState.handRaising;
-          }
-          break;
-        case ExerciseState.handRaising:
-          if (wristY < keypoints["rightElbow"]["y"]) {
-            exerciseState = ExerciseState.handUp;
-          }
-          break;
-        case ExerciseState.handUp:
-          if (wristY > keypoints["rightElbow"]["y"]) {
-            exerciseState = ExerciseState.handLowering;
-          }
-          break;
-        case ExerciseState.handLowering:
-          if (wristY > keypoints["rightShoulder"]["y"]) {
-            exerciseState = ExerciseState.handDown;
-            repCount++;
-            if(repCount==randomNumber){
-                 playRandomMessage();
-            }
-            //flutterTts1.speak(repCount.toString());
-            if(repCount>currentRep){
-              var rng = Random();
 
-              setState(() {
-                roundCount++;
-                repCount = 1;
-                randomNumber = rng.nextInt(currentRep) + 1;
-              });
-            }
-          }
-          break;
-      }
+
+      // // Determine the state of the exercise
+      // switch (exerciseState) {
+      //   case ExerciseState.handDown:
+      //     if (wristY < keypoints["rightShoulder"]["y"]) {
+      //       exerciseState = ExerciseState.handRaising;
+      //     }
+      //     break;
+      //   case ExerciseState.handRaising:
+      //     if (wristY < keypoints["rightElbow"]["y"]) {
+      //       exerciseState = ExerciseState.handUp;
+      //     }
+      //     break;
+      //   case ExerciseState.handUp:
+      //     if (wristY > keypoints["rightElbow"]["y"]) {
+      //       exerciseState = ExerciseState.handLowering;
+      //     }
+      //     break;
+      //   case ExerciseState.handLowering:
+      //     if (wristY > keypoints["rightShoulder"]["y"]) {
+      //       exerciseState = ExerciseState.handDown;
+      //       repCount++;
+      //       if(repCount==randomNumber){
+      //            playRandomMessage();
+      //       }
+      //       //flutterTts1.speak(repCount.toString());
+      //       if(repCount>currentRep){
+      //         var rng = Random();
+      //
+      //         setState(() {
+      //           roundCount++;
+      //           repCount = 1;
+      //           randomNumber = rng.nextInt(currentRep) + 1;
+      //         });
+      //       }
+      //     }
+      //     break;
+      // }
 
       var list = keypoints.values.map<Widget>((k) {
         if (k["score"] > 0.2) {
@@ -177,9 +190,9 @@ class _PoseDetectorState extends State<PoseDetector> {
             top: k["y"] * factorY,
             width: 100,
             height: 40,
-            child: const Text(
-             // "● ${k["part"]}",
-              "● ",
+            child:  Text(
+              "● ${k["part"]}",
+             // "● ",
               style: TextStyle(
                 color: Colors.red,
                 fontSize: 12.0,
@@ -216,7 +229,7 @@ class _PoseDetectorState extends State<PoseDetector> {
         var firstJoint = joints[0];
         var secondJoint = joints[1];
         if (keypoints.containsKey(firstJoint) && keypoints.containsKey(secondJoint)) {
-          if (keypoints[firstJoint]["score"] > 0.2 && keypoints[secondJoint]["score"] > 0.2) {
+          if (keypoints[firstJoint]["score"] > 0.1 && keypoints[secondJoint]["score"] > 0.1) {
             lists.add(
                 Container(
                   width: factorX,
@@ -234,9 +247,28 @@ class _PoseDetectorState extends State<PoseDetector> {
           }
         }
       }
+
+      exercises1[selectedExercise]?.processKeyPoints(keypoints);
     }
 
     return lists;
+  }
+
+  void updateUI() {
+    repCount++;
+    if(repCount==randomNumber){
+      playRandomMessage();
+    }
+    //flutterTts1.speak(repCount.toString());
+    if(repCount>currentRep){
+      var rng = Random();
+
+      setState(() {
+        roundCount++;
+        repCount = 1;
+        randomNumber = rng.nextInt(currentRep) + 1;
+      });
+    }
   }
 
   List<String> messages = [
@@ -303,6 +335,7 @@ class _PoseDetectorState extends State<PoseDetector> {
                                 onChanged: (value){
                                   setState(() {
                                     selectedExercise = value.toString();
+                                    exercises1[selectedExercise] = JumpingJacks(updateUI, currentRep);
                                   });
                                 }),
                           ),
@@ -424,7 +457,7 @@ class _PoseDetectorState extends State<PoseDetector> {
         backgroundColor: Colors.white,
         appBar: AppBar(
           backgroundColor: Colors.deepPurple,
-          title: Text('',
+          title: const Text('',
             style: TextStyle(
                 color: Colors.white,
                 fontSize: 25
@@ -457,7 +490,7 @@ class _PoseDetectorState extends State<PoseDetector> {
                 setState(() {
                   img = null;
                   repCount = 0;
-
+                  roundCount = 0;
                 });
               }
             }, icon: img==null?const Icon(Icons.flip_camera_ios,color: Colors.white,):
