@@ -9,7 +9,7 @@ import 'package:flutter_tflite/flutter_tflite.dart';
 import 'exercises.dart';
 import 'main.dart';
 
-enum ExerciseState { handDown, handRaising, handUp, handLowering }
+enum ExerciseState { handDown, handRaising, handUp, handLowering, upPosition }
 
 class PoseDetector extends StatefulWidget {
   const PoseDetector({super.key});
@@ -36,7 +36,7 @@ class _PoseDetectorState extends State<PoseDetector> {
   FlutterTts flutterTts1 = FlutterTts();
   var rounds = [1,2,3,4,5];
   var reps = [5,6,7,8,9,10,11,12,13,14,15];
-  List<String> exercises = ['Jumping jacks','Overhead presses','Bicep curls'];
+  List<String> exercises = ['Jumping jacks','Overhead presses','Bicep curls','Squat','Push Ups','DeadLift'];
   var currentRound = 3;
   var currentRep = 5;
   var selectedExercise = 'Jumping jacks';
@@ -86,6 +86,11 @@ class _PoseDetectorState extends State<PoseDetector> {
    // initCamera();
     exercises1 = {
       'Jumping Jacks': JumpingJacks(updateUI, currentRep),
+      'Overhead presses': OverheadPresses(updateUI, currentRep),
+      'Bicep curls': BicepCurls(updateUI, currentRep),
+      'Squat': Squat(updateUI, currentRep),
+      'Push Ups': PushUp(updateUI, currentRep),
+      'DeadLift': DeadLift(updateUI, currentRep),
       // Add other exercises here...
     };
     exercises1[selectedExercise] = JumpingJacks(updateUI, currentRep);
@@ -142,8 +147,8 @@ class _PoseDetectorState extends State<PoseDetector> {
       // Apply smoothing
       /*double wristY = 0.5 * previousWristY + 0.5 * keypoints["rightWrist"]["y"];
       previousWristY = wristY;*/
-
-
+      exercises1[selectedExercise]?.processKeyPoints(keypoints);
+      setState(() {});
 
       // // Determine the state of the exercise
       // switch (exerciseState) {
@@ -190,9 +195,9 @@ class _PoseDetectorState extends State<PoseDetector> {
             top: k["y"] * factorY,
             width: 100,
             height: 40,
-            child:  Text(
-              "● ${k["part"]}",
-             // "● ",
+            child:  const Text(
+              //"● ${k["part"]}",
+              "● ",
               style: TextStyle(
                 color: Colors.red,
                 fontSize: 12.0,
@@ -247,14 +252,12 @@ class _PoseDetectorState extends State<PoseDetector> {
           }
         }
       }
-
-      exercises1[selectedExercise]?.processKeyPoints(keypoints);
     }
 
     return lists;
   }
 
-  void updateUI() {
+  Future<void> updateUI() async {
     repCount++;
     if(repCount==randomNumber){
       playRandomMessage();
@@ -265,10 +268,30 @@ class _PoseDetectorState extends State<PoseDetector> {
 
       setState(() {
         roundCount++;
+        if(roundCount==currentRound){
+          stopPreview();
+
+        }
         repCount = 1;
         randomNumber = rng.nextInt(currentRep) + 1;
       });
+
     }
+  }
+
+  Future<void> stopPreview()async {
+
+
+    cameraController.stopImageStream();
+    cameraController.pausePreview().then((value) {
+      setState(() {
+        img = null;
+        repCount = 0;
+        roundCount = 0;
+      });
+      openDialog();
+    });
+
   }
 
   List<String> messages = [
@@ -335,7 +358,7 @@ class _PoseDetectorState extends State<PoseDetector> {
                                 onChanged: (value){
                                   setState(() {
                                     selectedExercise = value.toString();
-                                    exercises1[selectedExercise] = JumpingJacks(updateUI, currentRep);
+                                    //exercises1[selectedExercise] = JumpingJacks(updateUI, currentRep);
                                   });
                                 }),
                           ),
@@ -446,10 +469,7 @@ class _PoseDetectorState extends State<PoseDetector> {
 
     if (img != null && _recognitions.isNotEmpty) {
       stackChildren.addAll(renderKeyPoints(size));
-
     }
-
-
 
     return SafeArea(
 
@@ -506,8 +526,26 @@ class _PoseDetectorState extends State<PoseDetector> {
             )),
       ),
     );
+
+
   }
 
+  Future openDialog()=>showDialog(
+      context: context,
+      builder: (context)=>AlertDialog(
+        title: const Center(child: Text('Congratulations!!!')),
+        content: Text('You Complete $selectedExercise Successfully.'),
+        actions: [
+          Center(
+            child: ElevatedButton(onPressed: (){
+             //stopPreview();
+              Navigator.pop(context);
+            },
+              child: const Text('back'),
+            ),
+          ),
+        ],
+      ));
 /*Future runModel() async {
     if(cameraImage != null){
       await loadModel();
